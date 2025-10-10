@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Login — Generator IO Style</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body{margin:0;font-family:'Inter',sans-serif;background:#f4f6f8;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;color:#1f2937}
+    .card{background:#e5e7eb;padding:32px;border-radius:16px;max-width:400px;width:100%;box-shadow:0 8px 30px rgba(31,41,55,0.1)}
+    h1{margin:0 0 12px;font-size:22px;font-weight:600;color:#1f2937}
+    p.lead{margin:0 0 20px;color:#4b5563;font-size:14px}
+    label{display:block;font-size:13px;margin-bottom:6px;color:#6b7280}
+    input[type=text],input[type=password]{width:100%;padding:12px 14px;border-radius:10px;border:1px solid #d1d5db;background:#f9fafb;color:#1f2937;font-size:15px;outline:none;transition:all 0.2s ease;box-sizing:border-box}
+    input[type=text]:focus,input[type=password]:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,0.2)}
+    .row{display:flex;gap:10px;margin-top:16px}
+    button{cursor:pointer;padding:12px 14px;border-radius:10px;border:0;background:#374151;color:#ffffff;font-weight:600;font-size:14px;transition:background 0.2s, transform 0.1s;flex:none}
+    button:hover{background:#1f2937;transform:translateY(-1px)}
+    .toggle-btn{background:#374151;color:#ffffff;padding:12px 14px;border-radius:10px;font-size:14px;font-weight:600;transition:background 0.2s, color 0.2s, transform 0.1s;flex:none}
+    .toggle-btn:hover{background:#1f2937;color:#ffffff;transform:translateY(-1px)}
+    .muted{color:#6b7280;font-size:13px;margin-top:12px}
+    .danger{color:#ef4444}
+    .footer{margin-top:16px;text-align:center;color:#6b7280;font-size:12px}
+    .input-container{display:flex;gap:8px;width:100%}
+    .input-container input{flex:1}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>Entrar</h1>
+    <p class="lead">Digite seu login e senha.</p>
+
+    <div style="margin-bottom:12px">
+      <label for="login">Login</label>
+      <input id="login" type="text" autocomplete="username" placeholder="SeuLogin">
+    </div>
+
+    <div style="margin-bottom:12px">
+      <label for="password">Senha</label>
+      <div class="input-container">
+        <input id="password" type="password" autocomplete="current-password" placeholder="••••••">
+        <button id="toggle" type="button" class="toggle-btn">Mostrar</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <button id="submit">Entrar</button>
+      <button id="clear" type="button">Limpar</button>
+    </div>
+
+    <div class="muted" id="status">Tentativas restantes: —</div>
+  </main>
+
+  <script>
+    const maxAttempts = 5;
+    const loginInput = document.getElementById('login');
+    const passInput = document.getElementById('password');
+    const submitBtn = document.getElementById('submit');
+    const clearBtn = document.getElementById('clear');
+    const toggleBtn = document.getElementById('toggle');
+    const status = document.getElementById('status');
+
+    const storageKey = 'login_attempts_count_v1';
+    function getAttempts(){return parseInt(localStorage.getItem(storageKey)||'0',10)}
+    function incrAttempts(){localStorage.setItem(storageKey, String(getAttempts()+1))}
+    function resetAttempts(){localStorage.removeItem(storageKey)}
+
+    function updateStatus(){
+      const attempts = getAttempts();
+      const remaining = Math.max(0, maxAttempts - attempts);
+      status.textContent = attempts === 0 ? `Tentativas restantes: ${maxAttempts}` : `Tentativas restantes: ${remaining}`;
+      if(remaining === 0){
+        submitBtn.disabled = true;
+        status.innerHTML += ' — <span class="danger">Bloqueado. Atualize a página para tentar novamente.</span>';
+      }
+    }
+
+    toggleBtn.addEventListener('click', ()=>{
+      if(passInput.type === 'password'){
+        passInput.type = 'text';
+        toggleBtn.textContent = 'Ocultar';
+      } else {
+        passInput.type = 'password';
+        toggleBtn.textContent = 'Mostrar';
+      }
+    });
+
+    clearBtn.addEventListener('click', ()=>{loginInput.value='';passInput.value='';resetAttempts();updateStatus();});
+
+    function dayMonthHourSum(){
+      const d = new Date();
+      const day = d.getDate();
+      const month = d.getMonth() + 1;
+      const hour = d.getHours();
+      return day + month + hour;
+    }
+
+    function expectedPassword_fromLogin(login){
+      return `${login}${dayMonthHourSum()}`;
+    }
+
+    async function validate_login_logic(login, enteredPass){
+      const expected = expectedPassword_fromLogin(login);
+      return enteredPass === expected;
+    }
+
+    const redirectTo = 'invoice.html';
+
+    submitBtn.addEventListener('click', async ()=>{
+      if(getAttempts() >= maxAttempts){updateStatus();return}
+      const enteredLogin = loginInput.value.trim();
+      const enteredPass = passInput.value.trim();
+      if(!enteredLogin || !enteredPass){status.textContent='Preencha login e senha.';return}
+
+      const ok = await validate_login_logic(enteredLogin, enteredPass);
+      if(ok){
+        resetAttempts();
+        status.textContent='Login correto! Redirecionando...';
+        setTimeout(()=>{
+          location.replace(redirectTo);
+        },700);
+      } else {
+        incrAttempts();
+        updateStatus();
+        status.textContent='Login ou senha incorretos.';
+      }
+    });
+
+    updateStatus();
+  </script>
+</body>
+</html>
